@@ -20,13 +20,14 @@ for image in os.listdir('assets/sprites'):
     path = os.path.join('assets/sprites', image)
     IMAGES[name] = pygame.image.load(path)
 
+AUDIO = {}
+for audio in os.listdir('assets/audio'):
+    name, extension = os.path.splitext(audio)
+    path = os.path.join('assets/audio', audio)
+    AUDIO[name] = pygame.mixer.Sound(path)
+
 FLOOR_Y = H - IMAGES['floor'].get_height()
 
-start = pygame.mixer.Sound('assets/audio/start.wav')
-die = pygame.mixer.Sound('assets/audio/die.wav')
-hit = pygame.mixer.Sound('assets/audio/hit.wav')
-score = pygame.mixer.Sound('assets/audio/score.wav')
-flap = pygame.mixer.Sound('assets/audio/flap.wav')
 
 class Bird:
     def __init__(self, x, y):
@@ -61,6 +62,24 @@ class Bird:
         self.idx %= len(self.frames)
         self.image = self.images[self.frames[self.idx]]
         self.image = pygame.transform.rotate(self.image, self.rotate)
+
+    def go_die(self):
+        if self.rect.y < FLOOR_Y:
+            self.rect.y += self.max_y_vel
+            self.rotate = -90
+            self.image = self.images[self.frames[self.idx]]
+            self.image = pygame.transform.rotate(self.image, self.rotate)
+
+class Pipe:
+    def __init__(self, x, y):
+        self.image = IMAGES['pipes'][0]
+        self.rect = self.image.get_rect()
+        self.rect.x = x
+        self.rect.y = y
+        self.x_vel = -4
+
+    def update(self):
+        self.rect.x += self.x_vel
 
 def menu_window():
 
@@ -108,10 +127,12 @@ def menu_window():
 
 def game_window():
 
+    AUDIO['flap'].play()
     floor_gap = IMAGES['floor'].get_width() - W
     floor_x = 0
 
     bird = Bird(W * 0.2, (H - IMAGES['birds'][0].get_height()) / 2)
+    pipe = Pipe(W, H * 0.5)
 
     while True:
         flap = False
@@ -121,15 +142,23 @@ def game_window():
             if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_SPACE:
                     flap = True
+                    AUDIO['flap'].play()
 
         floor_x -= 4
         if floor_x <= -floor_gap:
             floor_x = 0
 
         bird.update(flap)
+        pipe.update()
+
+        if bird.rect.y > FLOOR_Y or bird.rect.y <= 0:
+            AUDIO['hit'].play()
+            AUDIO['die'].play()
+            result = {'bird': bird}
+            return result
 
         SCREEN.blit(IMAGES['bgpic'], (0, 0))
-        SCREEN.blit(IMAGES['pipes'][0], (W / 2, H / 2))
+        SCREEN.blit(pipe.image, pipe.rect)
         SCREEN.blit(IMAGES['floor'], (floor_x, FLOOR_Y))
         SCREEN.blit(bird.image, bird.rect)
 
@@ -137,7 +166,9 @@ def game_window():
         CLOCK.tick(FPS)
 
 
-def end_window():
+def end_window(result):
+
+    bird = result['bird']
 
     gameover_x = (W - IMAGES['gameover'].get_width())/2
     gameover_y = (FLOOR_Y - IMAGES['gameover'].get_height())/2
@@ -149,10 +180,13 @@ def end_window():
             if event.type == pygame.KEYDOWN and event.key == pygame.K_SPACE:
                 return
 
+            bird.go_die()
+
         SCREEN.blit(IMAGES['bgpic'], (0, 0))
         SCREEN.blit(IMAGES['pipes'][0], (W/2, H/2))
         SCREEN.blit(IMAGES['floor'], (0, FLOOR_Y))
         SCREEN.blit(IMAGES['gameover'], (gameover_x, gameover_y))
+        SCREEN.blit(bird.image, bird.rect)
 
         pygame.display.update()
         CLOCK.tick(FPS)
@@ -161,15 +195,15 @@ def end_window():
 
 if __name__ == '__main__':
     while True:
-        start.play()
+        AUDIO['start'].play()
         IMAGES['bgpic'] = IMAGES[random.choice(['day', 'night'])]
         color = random.choice(['red', 'yellow', 'blue'])
         IMAGES['birds'] = [IMAGES[color + '-up'], IMAGES[color + '-mid'], IMAGES[color + '-down']]
         pipe = IMAGES[random.choice(['green-pipe', 'red-pipe'])]
         IMAGES['pipes'] = [pipe, pygame.transform.flip(pipe, False, True)]
         menu_window()
-        game_window()
-        end_window()
+        result = game_window()
+        end_window(result)
 
 
 
