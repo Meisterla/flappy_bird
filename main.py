@@ -71,12 +71,20 @@ class Bird:
             self.image = pygame.transform.rotate(self.image, self.rotate)
 
 class Pipe:
-    def __init__(self, x, y):
-        self.image = IMAGES['pipes'][0]
-        self.rect = self.image.get_rect()
-        self.rect.x = x
-        self.rect.y = y
+    def __init__(self, x, y, upwards = True):
+        if upwards:
+            self.image = IMAGES['pipes'][0]
+            self.rect = self.image.get_rect()
+            self.rect.x = x
+            self.rect.top = y
+        else:
+            self.image = IMAGES['pipes'][1]
+            self.rect = self.image.get_rect()
+            self.rect.x = x
+            self.rect.bottom = y
         self.x_vel = -4
+
+
 
     def update(self):
         self.rect.x += self.x_vel
@@ -132,7 +140,17 @@ def game_window():
     floor_x = 0
 
     bird = Bird(W * 0.2, (H - IMAGES['birds'][0].get_height()) / 2)
-    pipe = Pipe(W, H * 0.5)
+
+    distance = 150
+    pipe_gap = 100
+    n = 4
+    pipes = []
+    for i in range(n):
+        pipe_y = random.randint(int(H*0.3), int(H*0.7))
+        pipe_up = Pipe(W + i * distance, pipe_y, True)
+        pipe_down = Pipe(W + i * distance, pipe_y - pipe_gap, False)
+        pipes.append(pipe_up)
+        pipes.append(pipe_down)
 
     while True:
         flap = False
@@ -149,7 +167,21 @@ def game_window():
             floor_x = 0
 
         bird.update(flap)
-        pipe.update()
+
+        first_pipe_up = pipes[0]
+        first_pipe_down = pipes[1]
+        if first_pipe_up.rect.right < 0:
+            pipes.remove(first_pipe_up)
+            pipes.remove(first_pipe_down)
+            pipe_y = random.randint(int(H * 0.3), int(H * 0.7))
+            new_pipe_up = Pipe(first_pipe_up.rect.x + n * distance, pipe_y, True)
+            new_pipe_down = Pipe(first_pipe_down.rect.x + n * distance, pipe_y - pipe_gap, False)
+            pipes.append(first_pipe_up)
+            pipes.append(first_pipe_down)
+            del first_pipe_up, first_pipe_down
+
+        for pipe in pipes:
+            pipe.update()
 
         if bird.rect.y > FLOOR_Y or bird.rect.y <= 0:
             AUDIO['hit'].play()
@@ -158,7 +190,8 @@ def game_window():
             return result
 
         SCREEN.blit(IMAGES['bgpic'], (0, 0))
-        SCREEN.blit(pipe.image, pipe.rect)
+        for pipe in pipes:
+            SCREEN.blit(pipe.image, pipe.rect)
         SCREEN.blit(IMAGES['floor'], (floor_x, FLOOR_Y))
         SCREEN.blit(bird.image, bird.rect)
 
