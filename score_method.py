@@ -45,11 +45,23 @@ def show_score(score, rate=1, size=(0, 0)):
     return number_screen
 
 
+def show_bar(num, num_max, size=(0, 0)):
+    surface_base_bar = pygame.image.load('assets/sprites/Empty.png')
+    w = size[0]
+    h = size[1]
+    w2 = w * num / num_max
+    surface_current_bar = pygame.Surface(size=(w2, h))
+    surface_current_bar.fill((255, 0, 0))
+    surface_base_bar.blit(surface_current_bar, (0, 0))
+    return surface_base_bar
+
+
 while True:
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             quit()
         else:
             SCREEN.blit(show_score(2323, rate=0.6), (300, 200))
+            SCREEN.blit(show_bar(num=90, num_max=100, size=(200, 20)), (200, 500))
         pygame.display.update()
     CLOCK.tick(30)
